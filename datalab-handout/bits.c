@@ -142,8 +142,15 @@ NOTES:
  *   Max ops: 14
  *   Rating: 1
  */
+/*
+  异或：
+  a⊕b = (¬a ∧ b) ∨ (a ∧¬b)
+  德·摩根定律:
+  非(P 且 Q) = (非 P) 或 (非 Q)
+  非(P 或 Q) = (非 P) 且 (非 Q)
+*/
 int bitXor(int x, int y) {
-  return 2;
+  return ~(~(~x & y) & ~(x & ~y));
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -153,7 +160,7 @@ int bitXor(int x, int y) {
  */
 int tmin(void) {
 
-  return 2;
+  return 1 << 31;
 
 }
 //2
@@ -165,7 +172,12 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+  int i = x + 1;//x + 1:如果x是int的正最大值，那么x + 1 会变成最小值；如果不是正最大值则不会变成最小值
+  x = x + i;//如果i是最小值，那么x + i会变成全1
+  x = ~x;//全1取反变0，则对x取非则可判断x是否int的正最大值
+  i = !i;//这里考虑到x有可能是全1，则x + 1 == 0，那么要排除这种可能
+  x = i + x;
+  return !x;
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -176,7 +188,9 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+  int mask = 0xaa + (0xaa << 8);//0xaa : 10101010b
+  mask = mask + (mask << 16);
+  return !((x & mask) ^ mask);//先用0xaaaaaaaa提取出奇数位，判断提取后的数跟mask是否相同即可：!(x ^ y)
 }
 /* 
  * negate - return -x 
@@ -186,11 +200,11 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 //3
 /* 
- * isAsciiDigit - return 1 if 0x30 <= x <= 0x39 (ASCII codes for characters '0' to '9')
+ * isAsciiDigit - return 1 if 0x30 <= x <= 0x39 (ASCII codes for characters '0' to '9') //0x30->00110000 , 0x39->00111001
  *   Example: isAsciiDigit(0x35) = 1.
  *            isAsciiDigit(0x3a) = 0.
  *            isAsciiDigit(0x05) = 0.
@@ -198,8 +212,10 @@ int negate(int x) {
  *   Max ops: 15
  *   Rating: 3
  */
-int isAsciiDigit(int x) {
-  return 2;
+int isAsciiDigit(int x) {//与上下区间作差，看两个差值是否都为正
+  int r_1 = x + ~0x30 + 1;
+  int r_2 = 0x39 + ~x + 1;
+  return !(r_1 >> 31) & !(r_2 >> 31) ;
 }
 /* 
  * conditional - same as x ? y : z 
@@ -209,7 +225,9 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  x = !!x;//将x改成0或1
+  x = (x << 31) >> 31;//(x << 31)是改变了x的符号位，然后>>31就是根据算术右移的性质进行符号扩展，最后的结果是x全0或全1
+  return (x & y) | (~x & z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -218,8 +236,16 @@ int conditional(int x, int y, int z) {
  *   Max ops: 24
  *   Rating: 3
  */
+//思路：判断y - x符号,因为y - x的符号跟y >= x是取反关系的的
+//如果直接减的话有可能会溢出，所以要对溢出的情况进行额外处理
+//按减数与被减数的符号关系，列出四种情况，其中可能溢出的情况是sign(x) ^ sign(y) == 1的情况
+//在sign(x) ^ sign(y) == 1的情况中，溢出等价于sign(y - x) ^ sign(x)
+//因此判断
 int isLessOrEqual(int x, int y) {
-  return 2;
+  int sign = ((y + ~x + 1) >> 31);
+  int over = ((x >> 31) ^ (y >> 31)) & (sign ^ (y >> 31));
+  int mask = !over;
+  return (mask & !sign) | (!mask & sign);
 }
 //4
 /* 
@@ -231,7 +257,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  return (( x | (~x + 1)) >> 31) + 1;//x | (~x + 1):如果x == 0，那么x的反码是全1,补码就是0本身，x | (~x + 1)输出的是0，算术右移得到的结果也是0，最后加上1就得到1；如果x != 0，那么x的补码跟x的或一定会得到一个负数，负数的算术右移会有符号扩展，那么(( x | (~x + 1)) >> 31)输出的结果就是全1，(( x | (~x + 1)) >> 31) + 1就是0
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
