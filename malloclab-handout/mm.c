@@ -175,19 +175,24 @@ void *coalesce(void *bp) {
         PUT(HEADER(bp), PACK(size, 0));
 
         ///修改下一块的尾部
-        PUT(FOOTER(NEXT_BLKP(bp)), PACK(size, 0));
-        
-        return bp;
+        PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
     }
     ///情况3：上下都没分配
+    else if (!prev_alloc && !next_alloc) {
+        size += GET_SIZE(NEXT_BLKP(bp)) + GET_SIZE(PREV_BLKP(bp));
+        PUT(FOOTER(NEXT_BLKP(bp)), PACK(size, 0));
+        PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
+        bp = PREV_BLKP(bp);
+    }
     ///情况4：上没分配，下被分配
+    else {
+        size += GET_SIZE(PREV_BLKP(bp));
+        PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
+        PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
+        bp = PREV_BLKP(bp);
+    }
+    return bp;
 }
-
-
-//思路记录
-//1.先了解memlib.c提供的对系统内存管理的模拟模型
-//2.编写有关的宏（PUT、PACK等）
-//3.写mm_init
 
 
 
