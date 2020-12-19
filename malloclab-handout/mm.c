@@ -58,7 +58,7 @@ team_t team = {
 #define PUT(p, val)         (*(unsigned int*)(p) = (val))
 
 #define GET_SIZE(p)         (GET(p) & ~0x07)  //p指向块的头部或尾部，这会获取p对应块的字节大小
-#define GET_ALLOC(p)        (GET(P) & 0X1)    //p指向块的头部或尾部，这会获得p对应块的alloc信息
+#define GET_ALLOC(p)        (GET(p) & 0X1)    //p指向块的头部或尾部，这会获得p对应块的alloc信息
 
 #define HEADER(bp)          ((char*)(bp) - WSIZE)  //bp指向块的第一个字节,调用这个宏会获得头部
 #define FOOTER(bp)          ((char*)(bp) + GET_SIZE(HEADER(bp)) - DSIZE) //bp指向块的第一个字节,调用这个宏会获得尾部
@@ -66,6 +66,8 @@ team_t team = {
 #define NEXT_BLKP(bp)       ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) //返回后一个BLOCK的第一个字节（不是头部哦）
 #define PREV_BLKP(bp)       ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //返回前一个BLOCK的第一个字节（不是头部哦）
 
+
+#define DEBUG
 static void* heap_listp;//隐式堆链表的头
 /* 
  * mm_init - initialize the malloc package.
@@ -87,6 +89,9 @@ int mm_init(void)
 
     //3.调extend_heap,尝试扩展堆
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
+#ifdef DEBUG
+    printf("mm_init success!!\n\n");
+#endif
     return 0;
 }
 
@@ -104,6 +109,9 @@ void *mm_malloc(size_t size)
         *(size_t *)p = size;
         return (void *)((char *)p + SIZE_T_SIZE);
     }
+#ifdef DEBUG
+    printf("mm_malloc success!!\n\n");
+#endif
 }
 
 /*
@@ -111,10 +119,13 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
-    size_t size = GET_SIZE(ptr);
+    size_t size = GET_SIZE(HEADER(ptr));
     PUT(HEADER(ptr), PACK(size, 0));
     PUT(FOOTER(ptr), PACK(size, 0));
     coalesce(ptr);
+#ifdef DEBUG
+    printf("mm_free success!!\n\n");
+#endif
 }
 
 /*
@@ -156,7 +167,7 @@ void *extend_heap(size_t words) {
 void *coalesce(void *bp) {
     //1.获取前后块的alloc信息
     size_t prev_alloc = GET_ALLOC(HEADER(PREV_BLKP(bp)));
-    size_t next_alloc = GET_ALLOC(FOOTER(NEXT_BLKP(bp));
+    size_t next_alloc = GET_ALLOC(FOOTER(NEXT_BLKP(bp)));
 
     //2.获取当前块的size
     size_t size = GET_SIZE(bp);
