@@ -47,8 +47,8 @@ team_t team = {
 #define MAX_HEAP            1024
 
 /* 相关的宏，方便操作 */
-#define WSIZE               4
-#define DSIZE               8
+#define WSIZE               4 //单字，4字节（一个字等于多少个字节，与系统硬件（总线、cpu命令字位数等）有关，不应该毫无前提地说一个字等于多少位。参考链接https://blog.csdn.net/fabulous1111/article/details/79525384）
+#define DSIZE               8 //双字
 #define CHUNKSIZE           (1<<12)  //4k
 
 #define MAX(x, y)           ((x) > (y) ? (x) : (y))
@@ -85,7 +85,7 @@ int mm_init(void)
     PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1));
     PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1));
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));
-    heap_listp += (2 * WSIZE);
+    heap_listp += (2 * WSIZE);//指向序言块
 
     //3.调extend_heap,尝试扩展堆
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
@@ -101,14 +101,31 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-    int newsize = ALIGN(size + SIZE_T_SIZE);
-    void *p = mem_sbrk(newsize);
-    if (p == (void *)-1)
-	return NULL;
-    else {
-        *(size_t *)p = size;
-        return (void *)((char *)p + SIZE_T_SIZE);
+    size_t asize;
+    size_t extendsize;
+    char *bp;
+
+    /* 处理无效请求 */
+    if (size == 0) {
+        return NULL;
     }
+    
+    /* 调整块大小，调整策略：如果请求大小小于最小块，那么直接改为最小块的size */
+    if (size <= DSIZE) asize = 2 * DSIZE;
+    else asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
+
+    /* 在隐式链表中寻找合适大小的块 */
+    if ((bp = find_fit(asize) != NULL)) {
+        place(bp, asize);
+        return bp;
+    }
+
+    /* 如果找不到合适的块，则申请更多的内存 */
+    extendsize = MAX(asize, CHUNKSIZE);
+    if ((bp = extend_heap(extendsize / WSIZE)) == NULL) return NULL;
+    place(bp, asize);
+    return bp;
+
 #ifdef DEBUG
     printf("mm_malloc success!!\n\n");
 #endif
@@ -174,7 +191,7 @@ void *coalesce(void *bp) {
     
     //3.根据那四种情况，分类讨论
     ///情况1：上下都被分配,这种情况在调用free时就已经处理了，因此这里不作处理，直接返回
-    if (prev_alloc && next_alloc) return;
+    if (prev_alloc && next_alloc) return bp;
     
     ///情况2：上被分配，下没分配
     else if (prev_alloc && !next_alloc) {
@@ -190,7 +207,7 @@ void *coalesce(void *bp) {
     }
     ///情况3：上下都没分配
     else if (!prev_alloc && !next_alloc) {
-        size += GET_SIZE(NEXT_BLKP(bp)) + GET_SIZE(PREV_BLKP(bp));
+        size += GET_SIZE(FOOTER(NEXT_BLKP(bp))) + GET_SIZE(HEADER(PREV_BLKP(bp)));
         PUT(FOOTER(NEXT_BLKP(bp)), PACK(size, 0));
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
@@ -205,7 +222,40 @@ void *coalesce(void *bp) {
     return bp;
 }
 
+/* 放置请求块到空闲块上
+   过程：（1）如果请求块与空闲块之间的空间差大于或等于一个最小块，则将这个最小块分割出去
+         （2）如果空闲块刚好能放下请求块，那么直接放下即可
+ */
+void place(void* bp, size_t asize) {
+    int csize = GET_SIZE(HEADER(bp));
+    if ((asize - csize) >= (2 * DSIZE)) {
+        PUT(HEADER(bp), PACK(asize, 1));
+        PUT(FOOTER(bp), PACK(asize, 1));
+        bp = NEXT_BLKP(bp);
+        PUT(HEADER(bp), PACK(csize - asize, 0));
+        PUT(FOOTER(bp), PACK(csize - asize, 0));
+    } else {
+        PUT(HEADER(bp), PACK(csize, 1));
+        PUT(HEADER(bp), PACK(csize, 1));
+    }
+}
 
+/*
+  寻找合适大小的空闲块
+*/
+void* find_fit(size_t asize) {
+    void* bp;
+    for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if ((!GET_ALLOC(HEADER(bp))) && !(GET_SIZE(HEADER(bp)) >= asize)) {
+           return bp;
+        }
+    }
+    return NULL;
+}
+
+void check_alloc() {
+
+}
 
 
 
