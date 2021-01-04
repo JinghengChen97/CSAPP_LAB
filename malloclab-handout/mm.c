@@ -67,7 +67,7 @@ team_t team = {
 #define PREV_BLKP(bp)       ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //返回前一个BLOCK的第一个字节（不是头部哦）
 
 
-#define DEBUG
+//#define DEBUG
 static void* heap_listp;//隐式堆链表的头
 /* 
  * mm_init - initialize the malloc package.
@@ -115,7 +115,7 @@ void *mm_malloc(size_t size)
     else asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
 
     /* 在隐式链表中寻找合适大小的块 */
-    if ((bp = find_fit(asize) != NULL)) {
+    if (((bp = find_fit(asize)) != NULL)) {
         place(bp, asize);
         return bp;
     }
@@ -139,10 +139,17 @@ void mm_free(void *ptr)
     size_t size = GET_SIZE(HEADER(ptr));
     PUT(HEADER(ptr), PACK(size, 0));
     PUT(FOOTER(ptr), PACK(size, 0));
-    coalesce(ptr);
 #ifdef DEBUG
-    printf("mm_free success!!\n\n");
+    if (*(unsigned int*)(HEADER(ptr)) == *(unsigned int*)(FOOTER(ptr))) {
+        printf("mm_free checker: Header and Footer are the same.\n");
+    } else {
+        printf("mm_free checker: Header and Footer are NOT the same!!!\n");
+    }
+
+    GoThroughList();
 #endif
+    coalesce(ptr);
+
 }
 
 /*
@@ -176,7 +183,15 @@ void *extend_heap(size_t words) {
     PUT(HEADER(bp), PACK(size, 0));//原来的终止块变成了新内存块的头部，因此要将原来的终止块设置一下
     PUT(FOOTER(bp), PACK(size, 0));//新内存块的尾部设置一下
     PUT(HEADER(NEXT_BLKP(bp)), PACK(0, 1));//新的终止块设置一下
-    
+
+#ifdef DEBUG
+    if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
+        printf("extend_heap checker: Header and Footer are the same.\n");
+    } else {
+        printf("extend_heap checker: Header and Footer are NOT the same!!!\n");
+    }
+#endif
+
     /*@todo:内存块合并*/
     return bp;
 }
@@ -204,6 +219,13 @@ void *coalesce(void *bp) {
 
         ///修改下一块的尾部
         PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
+#ifdef DEBUG
+        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
+            printf("coalesce checker: Header and Footer are the same.\n");
+        } else {
+            printf("coalesce checker: Header and Footer are NOT the same!!!\n");
+        }
+#endif
     }
     ///情况3：上下都没分配
     else if (!prev_alloc && !next_alloc) {
@@ -211,6 +233,13 @@ void *coalesce(void *bp) {
         PUT(FOOTER(NEXT_BLKP(bp)), PACK(size, 0));
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
+#ifdef DEBUG
+        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
+            printf("coalesce checker: Header and Footer are the same.\n");
+        } else {
+            printf("coalesce checker: Header and Footer are NOT the same!!!\n");
+        }
+#endif
     }
     ///情况4：上没分配，下被分配
     else {
@@ -218,7 +247,15 @@ void *coalesce(void *bp) {
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
         bp = PREV_BLKP(bp);
+#ifdef DEBUG
+        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
+            printf("coalesce checker: Header and Footer are the same.\n");
+        } else {
+            printf("coalesce checker: Header and Footer are NOT the same!!!\n");
+        }
+#endif
     }
+
     return bp;
 }
 
@@ -244,8 +281,15 @@ void place(void* bp, size_t asize) {
   寻找合适大小的空闲块
 */
 void* find_fit(size_t asize) {
+#ifdef DEBUG
+    int count = 0;
+#endif
+
     void* bp;
     for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
+#ifdef DEBUG
+        printf("find_fit: current bp is %X, block num is: %d\n", bp, ++count);
+#endif
         if ((!GET_ALLOC(HEADER(bp))) && !(GET_SIZE(HEADER(bp)) >= asize)) {
            return bp;
         }
@@ -253,11 +297,26 @@ void* find_fit(size_t asize) {
     return NULL;
 }
 
-void check_alloc() {
-
+void GoThroughList() {
+    void* bp = heap_listp;
+    int i = 0;
+    for (i = 0; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp), i++) {
+        printf("Current index is %d\n", i);
+        printf("Current block is %X\n", bp);
+        printf("Current header is %X\n", HEADER(bp));
+        printf("Current footer is %X\n", FOOTER(bp));
+        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
+            printf("Block %d's Footer and Header is the same.\n", i);
+        } else {
+            printf("Block %d's Footer and Header is NOT the same!!!\n", i);
+        }
+        printf("\n\n\n");
+    }
 }
 
-
+void* GetHeapListPtr() {
+    return heap_listp;
+}
 
 
 
