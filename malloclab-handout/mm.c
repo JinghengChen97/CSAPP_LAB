@@ -202,7 +202,7 @@ void *coalesce(void *bp) {
     size_t next_alloc = GET_ALLOC(FOOTER(NEXT_BLKP(bp)));
 
     //2.获取当前块的size
-    size_t size = GET_SIZE(bp);
+    size_t size = GET_SIZE(HEADER(bp));
     
     //3.根据那四种情况，分类讨论
     ///情况1：上下都被分配,这种情况在调用free时就已经处理了，因此这里不作处理，直接返回
@@ -219,13 +219,6 @@ void *coalesce(void *bp) {
 
         ///修改下一块的尾部
         PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
-#ifdef DEBUG
-        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
-            printf("coalesce checker: Header and Footer are the same.\n");
-        } else {
-            printf("coalesce checker: Header and Footer are NOT the same!!!\n");
-        }
-#endif
     }
     ///情况3：上下都没分配
     else if (!prev_alloc && !next_alloc) {
@@ -290,7 +283,7 @@ void* find_fit(size_t asize) {
 #ifdef DEBUG
         printf("find_fit: current bp is %X, block num is: %d\n", bp, ++count);
 #endif
-        if ((!GET_ALLOC(HEADER(bp))) && !(GET_SIZE(HEADER(bp)) >= asize)) {
+        if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
            return bp;
         }
     }
