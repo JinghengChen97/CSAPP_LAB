@@ -212,7 +212,7 @@ void *coalesce(void *bp) {
     else if (prev_alloc && !next_alloc) {
         //将下面那块跟当前块一起合并
         ///获得下一块与当前块的长度和
-        size += GET_SIZE(NEXT_BLKP(bp));
+        size += GET_SIZE(HEADER(NEXT_BLKP(bp)));
 
         ///修改当前块的头部
         PUT(HEADER(bp), PACK(size, 0));
