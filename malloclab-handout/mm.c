@@ -66,8 +66,15 @@ team_t team = {
 #define NEXT_BLKP(bp)       ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) //返回后一个BLOCK的第一个字节（不是头部哦）
 #define PREV_BLKP(bp)       ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //返回前一个BLOCK的第一个字节（不是头部哦）
 
-
 //#define DEBUG
+#ifdef  DEBUG
+#define DBG_PRINTF(...) fprintf(stderr, __VA_ARGS__)
+#define CHECK_HEAP(verbose) mm_checkheap(verbose)
+#else
+#define DBG_PRINTF(...)
+#define CHECK_HEAP(verbose)
+#endif
+
 static void* heap_listp;//隐式堆链表的头
 /* 
  * mm_init - initialize the malloc package.
@@ -75,6 +82,7 @@ static void* heap_listp;//隐式堆链表的头
  */
 int mm_init(void)
 {
+    DBG_PRINTF("mm_init\n");
     //1.从内存系统中要四个字，这四个字分别是起始块、序言块(两个双字)、终止块
     if ((heap_listp = mem_sbrk(4 * WSIZE)) == (void*)-1) {
         return -1;
@@ -89,9 +97,9 @@ int mm_init(void)
 
     //3.调extend_heap,尝试扩展堆
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
-#ifdef DEBUG
-    printf("mm_init success!!\n\n");
-#endif
+
+    //check heap
+    CHECK_HEAP(1);
     return 0;
 }
 
@@ -105,6 +113,7 @@ void *mm_malloc(size_t size)
     size_t extendsize;
     char *bp;
 
+    DBG_PRINTF("mm_alloc\n");
     /* 处理无效请求 */
     if (size == 0) {
         return NULL;
@@ -124,11 +133,10 @@ void *mm_malloc(size_t size)
     extendsize = MAX(asize, CHUNKSIZE);
     if ((bp = extend_heap(extendsize / WSIZE)) == NULL) return NULL;
     place(bp, asize);
-    return bp;
 
-#ifdef DEBUG
-    printf("mm_malloc success!!\n\n");
-#endif
+    //check heap
+    CHECK_HEAP(1);
+    return bp;
 }
 
 /*
@@ -137,19 +145,14 @@ void *mm_malloc(size_t size)
 void mm_free(void *ptr)
 {
     size_t size = GET_SIZE(HEADER(ptr));
+
+    DBG_PRINTF("mm_free\n");
     PUT(HEADER(ptr), PACK(size, 0));
     PUT(FOOTER(ptr), PACK(size, 0));
-#ifdef DEBUG
-    if (*(unsigned int*)(HEADER(ptr)) == *(unsigned int*)(FOOTER(ptr))) {
-        printf("mm_free checker: Header and Footer are the same.\n");
-    } else {
-        printf("mm_free checker: Header and Footer are NOT the same!!!\n");
-    }
-
-    GoThroughList();
-#endif
     coalesce(ptr);
-
+    
+    //check heap
+    CHECK_HEAP(1);
 }
 
 /*
@@ -164,7 +167,8 @@ void *mm_realloc(void *ptr, size_t size)
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+//    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+    copySize = GET_SIZE(HEADER(ptr));
     if (size < copySize)
       copySize = size;
     memcpy(newptr, oldptr, copySize);
@@ -184,22 +188,16 @@ void *extend_heap(size_t words) {
     PUT(FOOTER(bp), PACK(size, 0));//新内存块的尾部设置一下
     PUT(HEADER(NEXT_BLKP(bp)), PACK(0, 1));//新的终止块设置一下
 
-#ifdef DEBUG
-    if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
-        printf("extend_heap checker: Header and Footer are the same.\n");
-    } else {
-        printf("extend_heap checker: Header and Footer are NOT the same!!!\n");
-    }
-#endif
+    //check heap
+    CHECK_HEAP(1);
 
-    /*@todo:内存块合并*/
     return bp;
 }
 
 void *coalesce(void *bp) {
     //1.获取前后块的alloc信息
-    size_t prev_alloc = GET_ALLOC(HEADER(PREV_BLKP(bp)));
-    size_t next_alloc = GET_ALLOC(FOOTER(NEXT_BLKP(bp)));
+    size_t prev_alloc = GET_ALLOC(FOOTER(PREV_BLKP(bp)));
+    size_t next_alloc = GET_ALLOC(HEADER(NEXT_BLKP(bp)));
 
     //2.获取当前块的size
     size_t size = GET_SIZE(HEADER(bp));
@@ -226,29 +224,16 @@ void *coalesce(void *bp) {
         PUT(FOOTER(NEXT_BLKP(bp)), PACK(size, 0));
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
-#ifdef DEBUG
-        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
-            printf("coalesce checker: Header and Footer are the same.\n");
-        } else {
-            printf("coalesce checker: Header and Footer are NOT the same!!!\n");
-        }
-#endif
     }
     ///情况4：上没分配，下被分配
     else {
-        size += GET_SIZE(PREV_BLKP(bp));
+        size += GET_SIZE(HEADER(PREV_BLKP(bp)));
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
         bp = PREV_BLKP(bp);
-#ifdef DEBUG
-        if (*(unsigned int*)(HEADER(bp)) == *(unsigned int*)(FOOTER(bp))) {
-            printf("coalesce checker: Header and Footer are the same.\n");
-        } else {
-            printf("coalesce checker: Header and Footer are NOT the same!!!\n");
-        }
-#endif
     }
-
+    //check heap
+    CHECK_HEAP(1);
     return bp;
 }
 
@@ -258,7 +243,7 @@ void *coalesce(void *bp) {
  */
 void place(void* bp, size_t asize) {
     int csize = GET_SIZE(HEADER(bp));
-    if ((asize - csize) >= (2 * DSIZE)) {
+    if ((csize - asize) >= (2 * DSIZE)) {
         PUT(HEADER(bp), PACK(asize, 1));
         PUT(FOOTER(bp), PACK(asize, 1));
         bp = NEXT_BLKP(bp);
@@ -266,23 +251,16 @@ void place(void* bp, size_t asize) {
         PUT(FOOTER(bp), PACK(csize - asize, 0));
     } else {
         PUT(HEADER(bp), PACK(csize, 1));
-        PUT(HEADER(bp), PACK(csize, 1));
+        PUT(FOOTER(bp), PACK(csize, 1));
     }
 }
-
+//p *(unsigned int*)((char*) bp - 4)
 /*
   寻找合适大小的空闲块
 */
 void* find_fit(size_t asize) {
-#ifdef DEBUG
-    int count = 0;
-#endif
-
     void* bp;
     for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
-#ifdef DEBUG
-        printf("find_fit: current bp is %X, block num is: %d\n", bp, ++count);
-#endif
         if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
            return bp;
         }
@@ -311,7 +289,67 @@ void* GetHeapListPtr() {
     return heap_listp;
 }
 
+int check_block(void *bp)
+{
+    //area is aligned
+    if ((size_t)bp % 8)
+        printf("Error: %p is not doubleword aligned\n", bp);
+    //header and footer match
+    if (GET(HEADER(bp)) != GET(FOOTER(bp)))
+        printf("Error: header does not match footer\n");
+    size_t size = GET_SIZE(HEADER(bp));
+    //size is valid
+    if (size % 8)
+        printf("Error: %p payload size is not doubleword aligned\n", bp);
+    return GET_ALLOC(HEADER(bp));
+}
 
+void print_block(void *bp)
+{
+    long int hsize, halloc, fsize, falloc;
 
+    hsize = GET_SIZE(HEADER(bp));
+    halloc = GET_ALLOC(HEADER(bp));
+    fsize = GET_SIZE(FOOTER(bp));
+    falloc = GET_ALLOC(FOOTER(bp));
 
+    if (hsize == 0) {
+        printf("%p: EOL\n", bp);
+        return;
+    }
 
+    printf("%p: header: [%ld:%c] footer: [%ld:%c]\n", bp,
+           hsize, (halloc ? 'a' : 'f'),
+           fsize, (falloc ? 'a' : 'f'));
+}
+
+void mm_checkheap(int verbose)
+{
+    check_heap(verbose);
+}
+
+void check_heap(int verbose) {
+    char *bp = heap_listp;
+
+    if (verbose)
+        printf("Heap (%p):\n", heap_listp);
+
+    if ((GET_SIZE(HEADER(heap_listp)) != DSIZE) || !GET_ALLOC(HEADER(heap_listp)))
+        printf("Bad prologue header\n");
+    // block level
+    check_block(heap_listp);
+    int pre_free = 0;
+    for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if (verbose)
+            print_block(bp);
+        int cur_free = check_block(bp);
+        //no contiguous free blocks
+        if (pre_free && cur_free) {
+            printf("Contiguous free blocks\n");
+        }
+    }
+    if (verbose)
+        print_block(bp);
+    if ((GET_SIZE(HEADER(bp)) != 0) || !(GET_ALLOC(HEADER(bp))))
+        printf("Bad epilogue header\n");
+}

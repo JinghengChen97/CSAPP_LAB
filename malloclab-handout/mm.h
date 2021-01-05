@@ -13,6 +13,11 @@ static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void place(void* bp, size_t asize);
 
+static int check_block(void* bp);
+static void print_block();
+
+extern void mm_checkheap(int verbose);
+static void check_heap(int verbose);
 /*
  * Students work in teams of one or two.  Teams enter their team name, 
  * personal names and login IDs in a struct of this
