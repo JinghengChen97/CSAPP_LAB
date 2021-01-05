@@ -76,6 +76,7 @@ team_t team = {
 #endif
 
 static void* heap_listp;//隐式堆链表的头
+static void* previous_listp;//上一次成功匹配的块指针
 /* 
  * mm_init - initialize the malloc package.
  * 1.这一part参考书本的写法
@@ -98,6 +99,7 @@ int mm_init(void)
     //3.调extend_heap,尝试扩展堆
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
 
+    previous_listp = heap_listp;
     //check heap
     CHECK_HEAP(1);
     return 0;
@@ -257,10 +259,23 @@ void place(void* bp, size_t asize) {
 //p *(unsigned int*)((char*) bp - 4)
 /*
   寻找合适大小的空闲块
+  策略：下次适配
 */
 void* find_fit(size_t asize) {
-    void* bp;
-    for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
+    // void* bp;
+    // for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
+    //     if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
+    //        return bp;
+    //     }
+    // }
+
+    void* bp = previous_listp;
+    for (; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
+           return bp;
+        }
+    }
+    for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0 && bp != previous_listp; bp = NEXT_BLKP(bp)) {
         if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
            return bp;
         }
