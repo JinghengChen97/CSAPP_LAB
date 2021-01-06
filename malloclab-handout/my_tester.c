@@ -89,14 +89,21 @@ int main (int argc, char** argv) {
     printf("//2.1 内存块中有足够的空间放下所申请的内存:\n");
     printf("申请2040个字节x0\n");
     unsigned int* m_alloc_1 = mm_malloc(2040);
+    printf("m_alloc_1: %p\n", m_alloc_1);
     TesterGoThroughList();
 
     printf("申请2040个字节x1\n");
     unsigned int* m_alloc_2 = mm_malloc(2040);
+    printf("m_alloc_2: %p\n", m_alloc_2);
     TesterGoThroughList();
 
     printf("再申请48个字节x2\n");
     unsigned int* m_alloc_3 = mm_malloc(48);
+    printf("m_alloc_3: %p\n", m_alloc_3);
+    TesterGoThroughList();
+
+    printf("释放刚申请的48个字节\n");
+    mm_free(m_alloc_3);
     TesterGoThroughList();
 
     // //2.1 内存块中有足够的空间放下所申请的内存

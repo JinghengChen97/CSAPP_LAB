@@ -66,6 +66,17 @@ team_t team = {
 #define NEXT_BLKP(bp)       ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) //返回后一个BLOCK的第一个字节（不是头部哦）
 #define PREV_BLKP(bp)       ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //返回前一个BLOCK的第一个字节（不是头部哦）
 
+/* 指针操作的宏 */ 
+//makefile 中给出的-m32选项限制了指针是32位的，因此不用担心显式链表的指针的位数问题(32位和64位互转的问题)
+#define MAGIC_NUMBER 96
+#define LIST_MAX 16//分离链表最大的尺寸(1 << 15)
+#define PREDECESSOR_PTR(ptr) ((char*)(ptr)) //当前节点的前驱指针
+#define SUCCESSOR_PTR(ptr)   ((char*)(ptr) + WSIZE) //当前节点的后驱指针
+#define PREDECESSOR(ptr)    (*(char **)(ptr)) //当前节点的前驱节点(地址)
+#define SUCCESSOR(ptr)      (*(char **)(SUCCESSOR_PTR(ptr))) //当前节点的后驱节点(地址)
+
+#define SET_PTR(p, ptr)      (*(u_int32_t*)(p) = (u_int32_t)(ptr)) //设置某个地址的内容
+
 //#define DEBUG
 #ifdef  DEBUG
 #define DBG_PRINTF(...) fprintf(stderr, __VA_ARGS__)
@@ -76,8 +87,8 @@ team_t team = {
 #endif
 
 static void* heap_listp;//隐式堆链表的头
-static void* previous_listp;//上一次成功匹配的块指针
-/* 
+static u_int32_t* segmented_list[LIST_MAX] = {NULL}; //分离链表
+/*
  * mm_init - initialize the malloc package.
  * 1.这一part参考书本的写法
  */
@@ -99,13 +110,12 @@ int mm_init(void)
     //3.调extend_heap,尝试扩展堆
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
 
-    previous_listp = heap_listp;
     //check heap
     CHECK_HEAP(1);
     return 0;
 }
 
-/* 
+/*
  * mm_malloc - Allocate a block by incrementing the brk pointer.
  *     Always allocate a block whose size is a multiple of the alignment.
  */
@@ -120,22 +130,18 @@ void *mm_malloc(size_t size)
     if (size == 0) {
         return NULL;
     }
-    
-    /* 调整块大小，调整策略：如果请求大小小于最小块，那么直接改为最小块的size */
+
+    /* 调整块大小，调整策略：如果请求大小小于最小块，那么直接改为最小块的size(16字节) */
     if (size <= DSIZE) asize = 2 * DSIZE;
     else asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
 
-    /* 在隐式链表中寻找合适大小的块 */
-    if (((bp = find_fit(asize)) != NULL)) {
-        place(bp, asize);
-        return bp;
+    /* 在分离链表中寻找合适大小的块 */
+    if (((bp = find_fit(asize)) == NULL)) {
+        /* 如果找不到合适的块，则申请更多的内存 */
+        extendsize = MAX(asize, CHUNKSIZE);
+        if ((bp = extend_heap(extendsize / WSIZE)) == NULL) return NULL;
     }
-
-    /* 如果找不到合适的块，则申请更多的内存 */
-    extendsize = MAX(asize, CHUNKSIZE);
-    if ((bp = extend_heap(extendsize / WSIZE)) == NULL) return NULL;
-    place(bp, asize);
-
+    bp = place(bp, asize);
     //check heap
     CHECK_HEAP(1);
     return bp;
@@ -151,8 +157,8 @@ void mm_free(void *ptr)
     DBG_PRINTF("mm_free\n");
     PUT(HEADER(ptr), PACK(size, 0));
     PUT(FOOTER(ptr), PACK(size, 0));
+
     coalesce(ptr);
-    
     //check heap
     CHECK_HEAP(1);
 }
@@ -165,11 +171,10 @@ void *mm_realloc(void *ptr, size_t size)
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
-    
+
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
-//    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
     copySize = GET_SIZE(HEADER(ptr));
     if (size < copySize)
       copySize = size;
@@ -190,10 +195,7 @@ void *extend_heap(size_t words) {
     PUT(FOOTER(bp), PACK(size, 0));//新内存块的尾部设置一下
     PUT(HEADER(NEXT_BLKP(bp)), PACK(0, 1));//新的终止块设置一下
 
-    //check heap
-    CHECK_HEAP(1);
-
-    return bp;
+    return coalesce(bp);;
 }
 
 void *coalesce(void *bp) {
@@ -203,15 +205,20 @@ void *coalesce(void *bp) {
 
     //2.获取当前块的size
     size_t size = GET_SIZE(HEADER(bp));
-    
+
     //3.根据那四种情况，分类讨论
     ///情况1：上下都被分配,这种情况在调用free时就已经处理了，因此这里不作处理，直接返回
-    if (prev_alloc && next_alloc) return bp;
-    
+    if (prev_alloc && next_alloc) {
+        InsertNode(bp);
+        return bp;
+    }
+
     ///情况2：上被分配，下没分配
     else if (prev_alloc && !next_alloc) {
         //将下面那块跟当前块一起合并
         ///获得下一块与当前块的长度和
+        RemoveNode(NEXT_BLKP(bp));//先将下块从空闲链表中删除
+
         size += GET_SIZE(HEADER(NEXT_BLKP(bp)));
 
         ///修改当前块的头部
@@ -222,6 +229,9 @@ void *coalesce(void *bp) {
     }
     ///情况3：上下都没分配
     else if (!prev_alloc && !next_alloc) {
+        RemoveNode(PREV_BLKP(bp));//先将上块从空闲链表中删除
+        RemoveNode(NEXT_BLKP(bp));//先将下块从空闲链表中删除
+
         size += GET_SIZE(FOOTER(NEXT_BLKP(bp))) + GET_SIZE(HEADER(PREV_BLKP(bp)));
         PUT(FOOTER(NEXT_BLKP(bp)), PACK(size, 0));
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
@@ -229,13 +239,14 @@ void *coalesce(void *bp) {
     }
     ///情况4：上没分配，下被分配
     else {
+        RemoveNode(PREV_BLKP(bp));//先将上块从空闲链表中删除
+
         size += GET_SIZE(HEADER(PREV_BLKP(bp)));
         PUT(HEADER(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FOOTER(bp), PACK(size, 0));//这里用FOOT(bp)可以直接得到下一块的尾部，因为FOOTER是根据HEADER来跳转的，而HEADER在上面已经被修改了
         bp = PREV_BLKP(bp);
     }
-    //check heap
-    CHECK_HEAP(1);
+    InsertNode(bp);
     return bp;
 }
 
@@ -243,18 +254,33 @@ void *coalesce(void *bp) {
    过程：（1）如果请求块与空闲块之间的空间差大于或等于一个最小块，则将这个最小块分割出去
          （2）如果空闲块刚好能放下请求块，那么直接放下即可
  */
-void place(void* bp, size_t asize) {
+void* place(void* bp, size_t asize) {
     int csize = GET_SIZE(HEADER(bp));
+    RemoveNode(bp);//将这一块从空闲链表中删除
+    //1.如果csize - asize < 两个双字，直接放置即可；如大于两个双字，则：
     if ((csize - asize) >= (2 * DSIZE)) {
-        PUT(HEADER(bp), PACK(asize, 1));
-        PUT(FOOTER(bp), PACK(asize, 1));
-        bp = NEXT_BLKP(bp);
-        PUT(HEADER(bp), PACK(csize - asize, 0));
-        PUT(FOOTER(bp), PACK(csize - asize, 0));
+        //2.如果asize < MAGIC_NUMBER,放前面；
+        if (asize < MAGIC_NUMBER) {
+            PUT(HEADER(bp), PACK(asize, 1));
+            PUT(FOOTER(bp), PACK(asize, 1));
+
+            PUT(HEADER(NEXT_BLKP(bp)), PACK(csize - asize, 0));
+            PUT(FOOTER(NEXT_BLKP(bp)), PACK(csize - asize, 0));
+            InsertNode(NEXT_BLKP(bp));//将剩余的空间加入空闲链表
+        } else {//3.如果asize >= MAGIC_NUMBER，放后面
+            PUT(HEADER(bp), PACK(csize - asize, 0));
+            PUT(FOOTER(bp), PACK(csize - asize, 0));
+            InsertNode(bp);//将剩余的空间加入空闲链表
+
+            bp = NEXT_BLKP(bp);
+            PUT(HEADER(bp), PACK(asize, 1));
+            PUT(FOOTER(bp), PACK(asize, 1));
+        }
     } else {
         PUT(HEADER(bp), PACK(csize, 1));
         PUT(FOOTER(bp), PACK(csize, 1));
     }
+    return bp;
 }
 //p *(unsigned int*)((char*) bp - 4)
 /*
@@ -262,25 +288,28 @@ void place(void* bp, size_t asize) {
   策略：下次适配
 */
 void* find_fit(size_t asize) {
-    // void* bp;
-    // for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
-    //     if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
-    //        return bp;
-    //     }
-    // }
-
-    void* bp = previous_listp;
-    for (; GET_SIZE(HEADER(bp)) > 0; bp = NEXT_BLKP(bp)) {
-        if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
-           return bp;
-        }
+    void* bp;
+    int index = 0;
+    size_t size = 1;
+    void *block, *pre;
+    //1.从分离链表中找出适合大小的链表号
+    while (index < LIST_MAX && 2 * size <= asize) {
+        size = 1 << (++index);
     }
-    for (bp = heap_listp; GET_SIZE(HEADER(bp)) > 0 && bp != previous_listp; bp = NEXT_BLKP(bp)) {
-        if ((!GET_ALLOC(HEADER(bp))) && (GET_SIZE(HEADER(bp)) >= asize)) {
-           return bp;
+    //2.找找这个链表中有无空闲块;如果没有，去下一个链表找
+    //3.返回这个块的指针
+    while (index < LIST_MAX) {
+        block = segmented_list[index++];
+        if (block == NULL) continue;
+        while (block != NULL && GET_SIZE(HEADER(block)) < asize) {
+            pre = block;
+            block = SUCCESSOR(block);
         }
+        if (block == NULL) continue;
+        else
+            return block;
     }
-    return NULL;
+    return block;
 }
 
 void GoThroughList() {
@@ -362,9 +391,129 @@ void check_heap(int verbose) {
         if (pre_free && cur_free) {
             printf("Contiguous free blocks\n");
         }
+
     }
+    //list level
+    int i = 0, tarsize = 1;
+    for (; i < LIST_MAX; i++) {
+        if (verbose)
+            print_list(segmented_list[i], tarsize);
+        check_list(segmented_list[i],tarsize);
+        tarsize <<= 1;
+    }
+
     if (verbose)
         print_block(bp);
     if ((GET_SIZE(HEADER(bp)) != 0) || !(GET_ALLOC(HEADER(bp))))
         printf("Bad epilogue header\n");
+}
+
+void print_list(void *i, long size)
+{
+    long int hsize, halloc;
+
+    for(;i != NULL;i = SUCCESSOR(i))
+    {
+        hsize = GET_SIZE(HEADER(i));
+        halloc = GET_ALLOC(HEADER(i));
+        printf("[listnode %ld] %p: header: [%ld:%c] prev: [%p]  next: [%p]\n",
+               size, i,
+               hsize, (halloc ? 'a' : 'f'),
+               PREDECESSOR(i), SUCCESSOR(i));
+    }
+}
+void check_list(void *i, size_t tar)
+{
+    void *pre = NULL;
+    long int hsize, halloc;
+    for(;i != NULL;i = SUCCESSOR(i))
+    {
+        if (PREDECESSOR(i) != pre)
+            printf("Error: pred point error\n");
+        if (pre != NULL && SUCCESSOR(pre) != i)
+            printf("Error: succ point error\n");
+        hsize = GET_SIZE(HEADER(i));
+        halloc = GET_ALLOC(HEADER(i));
+        if (halloc)
+            printf("Error: list node should be free\n");
+        if (pre != NULL && (GET_SIZE(HEADER(pre)) > hsize))
+            printf("Error: list size order error\n");
+        if (hsize < tar || ((tar != (1<<15)) && (hsize > (tar << 1)-1)))
+            printf("Error: list node size error\n");
+        pre = i;
+    }
+}
+
+void InsertNode(void* node) {
+    size_t asize = GET_SIZE(HEADER(node));
+
+    size_t size = 1;
+    u_int32_t *block = NULL, *pre = NULL;
+    int index = 0;
+
+    //初始化待插入的节点
+    SET_PTR(PREDECESSOR_PTR(node), NULL);
+    SET_PTR(SUCCESSOR_PTR(node), NULL);
+
+    //1.从分离链表中找出适合大小的链表号
+    while (index < LIST_MAX && 2 * size <= asize) {
+        size = 1 << (++index);
+    }
+    //2.将节点插入对应的分离链表
+    //2.1 先在这个链表里找到合适的位置(大于某个块，然后在这个块后面插入)
+    block = segmented_list[index];
+    pre = NULL;
+    while (block != NULL && GET_SIZE(HEADER(block)) < asize) {
+        pre = block;
+        block = SUCCESSOR(block);
+    }
+    if (pre == NULL && block == NULL) {// empty list
+        segmented_list[index] = node;
+    } else if (pre != NULL && block == NULL) {//2.2 尾部插入
+        SET_PTR(SUCCESSOR_PTR(pre), node);
+        SET_PTR(PREDECESSOR_PTR(node), pre);
+    } else if (pre == NULL) {//2.3 头部插入
+        segmented_list[index] = node;
+        SET_PTR(SUCCESSOR_PTR(node), block);
+        SET_PTR(PREDECESSOR_PTR(block), node);
+    } else {//2.4 中间插入
+        SET_PTR(SUCCESSOR_PTR(pre), node);
+        SET_PTR(PREDECESSOR_PTR(block), node);
+        SET_PTR(SUCCESSOR_PTR(node), block);
+        SET_PTR(PREDECESSOR_PTR(node), pre);
+    }
+
+}
+void RemoveNode(void* node) {
+    size_t asize = GET_SIZE(HEADER(node));
+    size_t size = 1;
+    u_int32_t *block = NULL, *pre = NULL;
+    int index = 0;
+    //1.从分离链表中找出适合大小的链表号
+    while (index < LIST_MAX && 2 * size <= asize) {
+        size = 1 << (++index);
+    }
+    //2.如果该节点是分离链表的头
+    if (PREDECESSOR(node) == NULL) {
+        if (SUCCESSOR(node) != NULL) SET_PTR(PREDECESSOR_PTR(SUCCESSOR(node)), NULL);
+        segmented_list[index] = SUCCESSOR(node);
+
+    }
+    //3.如果该节点不是分离链表的头
+    else {
+        SET_PTR(SUCCESSOR_PTR(PREDECESSOR(node)), SUCCESSOR(node));//block前驱的后驱指针指向block的后驱
+        if (SUCCESSOR(node) != NULL) SET_PTR(PREDECESSOR_PTR(SUCCESSOR(node)), PREDECESSOR(node));//block后驱的前驱指针指向block的前驱
+
+    }
+
+//    if (PREDECESSOR(node) == NULL) { // first one
+//        segmented_list[index] = SUCCESSOR(node);
+//        if (SUCCESSOR(node) != NULL)
+//            SET_PTR(PREDECESSOR_PTR(SUCCESSOR(node)), NULL);
+//    } else if (SUCCESSOR(node) == NULL) { //last one
+//        SET_PTR(SUCCESSOR_PTR(PREDECESSOR(node)), NULL);
+//    } else {
+//        SET_PTR(SUCCESSOR_PTR(PREDECESSOR(node)), SUCCESSOR(node));
+//        SET_PTR(PREDECESSOR_PTR(SUCCESSOR(node)), PREDECESSOR(node));
+//    }
 }
