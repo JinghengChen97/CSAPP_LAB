@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ch/code/CSAPP_LAB/cachelab-handout/cachelab.h
+
+/home/ch/code/CSAPP_LAB/cachelab-handout/csim.c
+cachelab.h
+/home/ch/code/CSAPP_LAB/cachelab-handout/cachelab.h
+stdlib.h
+-
+string.h
+-
+stdio.h
+-
+getopt.h
+-
+unistd.h
+-
+limits.h
+-
+
