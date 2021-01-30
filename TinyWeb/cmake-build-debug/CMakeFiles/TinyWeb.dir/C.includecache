@@ -6,10 +6,6 @@
 
 #IncludeRegexTransform: 
 
-/home/ch/code/CSAPP_LAB/TinyWeb/csapp.c
-csapp.h
-/home/ch/code/CSAPP_LAB/TinyWeb/csapp.h
-
 /home/ch/code/CSAPP_LAB/TinyWeb/csapp.h
 stdio.h
 -
@@ -53,4 +49,8 @@ netinet/in.h
 -
 arpa/inet.h
 -
+
+/home/ch/code/CSAPP_LAB/TinyWeb/tinyweb.c
+csapp.h
+/home/ch/code/CSAPP_LAB/TinyWeb/csapp.h
 

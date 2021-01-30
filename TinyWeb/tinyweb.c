@@ -3,16 +3,24 @@
  * tiny.c - A simple, iterative HTTP/1.0 Web server that uses the 
  *     GET method to serve static and dynamic content.
  */
-#include "csapp.h"
 
+/* 参考：
+    https://blog.csdn.net/zhanyu1990/article/details/18739919 
+    https://www.cnblogs.com/liqiuhao/p/8432660.html
+*/
+#include "csapp.h"
+#define IS_HEAD_METHOD  1
+#define IS_POST_METHOD  2
+#define IS_GET_METHOD   3
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *filename, char *cgiargs);
-void serve_static(int fd, char *filename, int filesize);
+void serve_static(int fd, char *filename, int filesize, int method);
 void get_filetype(char *filename, char *filetype);
-void serve_dynamic(int fd, char *filename, char *cgiargs);
+void serve_dynamic(int fd, char *filename, char *cgiargs, int method, rio_t *rp);
 void clienterror(int fd, char *cause, char *errnum,
                  char *shortmsg, char *longmsg);
+void sigepipe_handler(int sig);
 
 int main(int argc, char **argv)
 {
@@ -25,6 +33,11 @@ int main(int argc, char **argv)
         exit(1);
     }
     port = atoi(argv[1]);
+
+    /* csapp 11.13 */
+    if (Signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        unix_error("mask signal pipe error");
+    }
 
     listenfd = Open_listenfd(port);
     while (1) {
@@ -42,6 +55,7 @@ int main(int argc, char **argv)
 /* $begin doit */
 void doit(int fd)
 {
+    int which_method;
     int is_static;
     struct stat sbuf;
     char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
@@ -52,12 +66,25 @@ void doit(int fd)
     Rio_readinitb(&rio, fd);
     Rio_readlineb(&rio, buf, MAXLINE);                   //line:netp:doit:readrequest
     sscanf(buf, "%s %s %s", method, uri, version);       //line:netp:doit:parserequest
-    if (strcasecmp(method, "GET")) {                     //line:netp:doit:beginrequesterr
+
+    /* csapp 11.11 */
+    if (strcasecmp(method, "GET") == 0) {                     //line:netp:doit:beginrequesterr
+        which_method = IS_GET_METHOD;
+    } else if (strcasecmp(method, "HEAD") == 0) {
+        which_method = IS_HEAD_METHOD;
+    } else if (strcasecmp(method, "POST") == 0) {
+        which_method = IS_POST_METHOD;
+    } else {
         clienterror(fd, method, "501", "Not Implemented",
-                    "Tiny does not implement this method");
+            "Tiny does not implement this method");
         return;
     }
-//line:netp:doit:endrequesterr
+    
+    //line:netp:doit:endrequesterr
+    /* 习题11.6 A
+        由于read_requesthdrs会打印请求报头，因此我们再打印一个请求行即可
+    */
+    printf("%s %s %s\n", method, uri, version);
     read_requesthdrs(&rio);                              //line:netp:doit:readrequesthdrs
 
     /* Parse URI from GET request */
@@ -74,7 +101,7 @@ void doit(int fd)
                         "Tiny couldn't read the file");
             return;
         }
-        serve_static(fd, filename, sbuf.st_size);        //line:netp:doit:servestatic
+        serve_static(fd, filename, sbuf.st_size, which_method);        //line:netp:doit:servestatic
     }
     else { /* Serve dynamic content */
         if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode)) { //line:netp:doit:executable
@@ -82,7 +109,7 @@ void doit(int fd)
                         "Tiny couldn't run the CGI program");
             return;
         }
-        serve_dynamic(fd, filename, cgiargs);            //line:netp:doit:servedynamic
+        serve_dynamic(fd, filename, cgiargs, which_method, &rio);            //line:netp:doit:servedynamic
     }
 }
 /* $end doit */
@@ -100,8 +127,6 @@ void read_requesthdrs(rio_t *rp)
         Rio_readlineb(rp, buf, MAXLINE);
         printf("%s", buf);
     }
-//    printf("132454567");//why cannot printf this line?
-
     return;
 }
 /* $end read_requesthdrs */
@@ -142,7 +167,8 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
  * serve_static - copy a file back to the client 
  */
 /* $begin serve_static */
-void serve_static(int fd, char *filename, int filesize)
+
+void serve_static(int fd, char *filename, int filesize, int method)
 {
     int srcfd;
     char *srcp, filetype[MAXLINE], buf[MAXBUF];
@@ -155,12 +181,22 @@ void serve_static(int fd, char *filename, int filesize)
     sprintf(buf, "%sContent-type: %s\r\n\r\n", buf, filetype);
     Rio_writen(fd, buf, strlen(buf));       //line:netp:servestatic:endserve
 
+    /* csapp 11.11 */
+    if (method == IS_HEAD_METHOD) return;
+
     /* Send response body to client */
     srcfd = Open(filename, O_RDONLY, 0);    //line:netp:servestatic:open
-    srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);//line:netp:servestatic:mmap
-    Close(srcfd);                           //line:netp:servestatic:close
+
+    /* csapp 11.9 */
+    srcp = (char*)malloc(filesize);
+    Rio_readn(srcfd, srcp, filesize);
+    Close(srcfd);
     Rio_writen(fd, srcp, filesize);         //line:netp:servestatic:write
-    Munmap(srcp, filesize);                 //line:netp:servestatic:munmap
+    free(srcp);
+    // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);//line:netp:servestatic:mmap
+    // Close(srcfd);                           //line:netp:servestatic:close
+    // Rio_writen(fd, srcp, filesize);         //line:netp:servestatic:write
+    // Munmap(srcp, filesize);                 //line:netp:servestatic:munmap
 }
 
 /*
@@ -174,10 +210,12 @@ void get_filetype(char *filename, char *filetype)
         strcpy(filetype, "image/gif");
     else if (strstr(filename, ".jpg"))
         strcpy(filetype, "image/jpeg");
+
     /** csapp 11.7 **/
     else if (strstr(filename, "./mpg"))
         strcpy(filetype, "video/mpg");
     /** end **/
+
     else
         strcpy(filetype, "text/plain");
 }
@@ -199,7 +237,7 @@ void sigchild_handler(int sig) {
  * serve_dynamic - run a CGI program on behalf of the client
  */
 /* $begin serve_dynamic */
-void serve_dynamic(int fd, char *filename, char *cgiargs)
+void serve_dynamic(int fd, char *filename, char *cgiargs, int method, rio_t *rp)
 {
     char buf[MAXLINE], *emptylist[] = { NULL };
 
@@ -208,6 +246,16 @@ void serve_dynamic(int fd, char *filename, char *cgiargs)
     Rio_writen(fd, buf, strlen(buf));
     sprintf(buf, "Server: Tiny Web Server\r\n");
     Rio_writen(fd, buf, strlen(buf));
+
+    /* csapp 11.11 */
+    if (method == IS_HEAD_METHOD) return;
+
+    /* csapp 11.12 */
+    /* question:万一post的东西很大怎么办？ */
+    if (method == IS_POST_METHOD){  /* POST */
+        Rio_readnb(rp, buf, rp->rio_cnt);
+        strcpy(cgiargs, buf);
+    }
 
     /** csapp 11.8 **/
     /** 疑问：跑adder是能正常工作的，但换成spin就出问题：我想在每一次睡眠之后都给网页发数据(spintf之后printf字符串指针，然后fflush)，但是并没有显示； **/

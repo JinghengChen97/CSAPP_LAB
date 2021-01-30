@@ -1,0 +1,22 @@
+GET /home.html HTTP/1.1
+
+# User-Agent解读：https://www.jianshu.com/p/c5cf6a1967d1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0
+
+
+# 其他解读https://blog.csdn.net/weixin_43867210/article/details/85344754?ops_request_misc=%25257B%252522request%25255Fid%252522%25253A%252522161200574116780262513826%252522%25252C%252522scm%252522%25253A%25252220140713.130102334..%252522%25257D&request_id=161200574116780262513826&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduend~default-2-85344754.pc_search_result_no_baidu_js&utm_term=Accept-Language
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: zh-CN,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+GET /favicon.ico HTTP/1.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0
+Accept: image/webp,*/*
+Accept-Language: zh-CN,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: http://192.168.3.6:2000/home.html
+

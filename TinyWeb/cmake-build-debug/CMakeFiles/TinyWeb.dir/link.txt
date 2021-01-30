@@ -1,1 +1,1 @@
-/usr/bin/cc -g   CMakeFiles/TinyWeb.dir/tinyweb.c.o CMakeFiles/TinyWeb.dir/csapp.c.o  -o TinyWeb 
+/usr/bin/cc -g   CMakeFiles/TinyWeb.dir/tinyweb.c.o CMakeFiles/TinyWeb.dir/csapp.c.o  -o TinyWeb  -lpthread 
