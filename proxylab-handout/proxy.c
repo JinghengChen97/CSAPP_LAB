@@ -20,12 +20,16 @@ void clienterror(int fd, char *cause, char *errnum,
 void sigepipe_handler(int sig);
 
 int connect_server(char* host_ip, char* port, char* query_path);//连接服务器并转发请求，成功则返回服务器的套接字描述符，失败返回0
+void *thread(void *connfd);
+
 
 int main(int argc, char **argv)
 {
-    int listenfd, connfd, clientlen;
+    int listenfd, clientlen;
+    int* connfd;
     char* port;
     struct sockaddr_in clientaddr;
+    pthread_t tid;
 
     /* Check command line args */
     if (argc != 2) {
@@ -43,12 +47,23 @@ int main(int argc, char **argv)
     listenfd = Open_listenfd(port);
     while (1) {
         clientlen = sizeof(clientaddr);
-        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); //line:netp:tiny:accept
-        doit(connfd);                                             //line:netp:tiny:doit
-        Close(connfd);                                            //line:netp:tiny:close
+        connfd = Malloc(sizeof(int));
+        *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); //line:netp:tiny:accept
+        Pthread_create(&tid, NULL, thread, connfd);
     }
 }
 /* $end tinymain */
+
+/* $begin thread */
+void *thread(void* connfd) {
+    int client_fd = *((int *) connfd);
+    Pthread_detach(pthread_self());
+    Free(connfd);
+    doit(client_fd);
+    Close(client_fd);
+    return;
+}
+/* $end thread */
 
 /*
  * doit - handle one HTTP request/response transaction
