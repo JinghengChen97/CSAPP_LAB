@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="malloc_lab"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="malloc_lab_tester">
+				<Option output="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/malloc_lab_tester" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 malloc_lab_tester"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="malloc_lab_tester/fast">
+				<Option output="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/malloc_lab_tester" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 malloc_lab_tester/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="malloc_lab">
+				<Option output="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/malloc_lab" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 malloc_lab"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="malloc_lab/fast">
+				<Option output="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/malloc_lab" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 malloc_lab/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/clock.c">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/clock.h">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/fcyc.c">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/fcyc.h">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/fsecs.c">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/fsecs.h">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/ftimer.c">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/ftimer.h">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/mdriver.c">
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/memlib.c">
+			<Option target="malloc_lab_tester"/>
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/memlib.h">
+			<Option target="malloc_lab_tester"/>
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/mm.c">
+			<Option target="malloc_lab_tester"/>
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/mm.h">
+			<Option target="malloc_lab_tester"/>
+			<Option target="malloc_lab"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/my_tester.c">
+			<Option target="malloc_lab_tester"/>
+		</Unit>
+		<Unit filename="/home/ch/code/CSAPP_LAB/malloclab-handout/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

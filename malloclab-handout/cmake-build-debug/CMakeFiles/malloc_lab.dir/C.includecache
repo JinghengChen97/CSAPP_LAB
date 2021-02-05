@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ch/code/CSAPP_LAB/malloclab-handout/memlib.h
+unistd.h
+-
+
+/home/ch/code/CSAPP_LAB/malloclab-handout/mm.c
+stdio.h
+-
+stdlib.h
+-
+assert.h
+-
+unistd.h
+-
+string.h
+-
+mm.h
+/home/ch/code/CSAPP_LAB/malloclab-handout/mm.h
+memlib.h
+/home/ch/code/CSAPP_LAB/malloclab-handout/memlib.h
+
+/home/ch/code/CSAPP_LAB/malloclab-handout/mm.h
+stdio.h
+-
+

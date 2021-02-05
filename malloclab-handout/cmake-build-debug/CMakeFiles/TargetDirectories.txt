@@ -1,0 +1,4 @@
+/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/CMakeFiles/malloc_lab_tester.dir
+/home/ch/code/CSAPP_LAB/malloclab-handout/cmake-build-debug/CMakeFiles/malloc_lab.dir

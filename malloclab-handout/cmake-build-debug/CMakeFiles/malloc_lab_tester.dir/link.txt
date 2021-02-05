@@ -1,0 +1,1 @@
+gcc -m32 -g   CMakeFiles/malloc_lab_tester.dir/my_tester.c.o CMakeFiles/malloc_lab_tester.dir/memlib.c.o CMakeFiles/malloc_lab_tester.dir/mm.c.o  -o malloc_lab_tester  -lpthread 

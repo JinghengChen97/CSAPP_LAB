@@ -1,0 +1,1 @@
+gcc -m32 -g   CMakeFiles/malloc_lab.dir/mdriver.c.o CMakeFiles/malloc_lab.dir/memlib.c.o CMakeFiles/malloc_lab.dir/mm.c.o CMakeFiles/malloc_lab.dir/fsecs.c.o CMakeFiles/malloc_lab.dir/fcyc.c.o CMakeFiles/malloc_lab.dir/ftimer.c.o CMakeFiles/malloc_lab.dir/clock.c.o  -o malloc_lab  -lpthread 
