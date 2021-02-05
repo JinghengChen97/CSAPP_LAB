@@ -54,7 +54,7 @@ int main(int argc, char **argv)
  * doit - handle one HTTP request/response transaction
  */
 /* $begin doit */
-void doit(int fd)
+void doit(int client_fd)
 {
     int which_method;
     int server_fd;
@@ -63,7 +63,7 @@ void doit(int fd)
     rio_t rio;
 
     /* Read request line and headers */
-    Rio_readinitb(&rio, fd);
+    Rio_readinitb(&rio, client_fd);
     Rio_readlineb(&rio, buf, MAXLINE);                   //line:netp:doit:readrequest
     sscanf(buf, "%s %s %s", method, uri, version);       //line:netp:doit:parserequest
 
@@ -75,7 +75,7 @@ void doit(int fd)
     } else if (strcasecmp(method, "POST") == 0) {
         which_method = IS_POST_METHOD;
     } else {
-        clienterror(fd, method, "501", "Not Implemented",
+        clienterror(client_fd, method, "501", "Not Implemented",
             "Tiny does not implement this method");
         return;
     }
@@ -89,7 +89,17 @@ void doit(int fd)
     //try to connect server
     server_fd = connect_server(hostname, port, filename);
 
+    //等待服务器返回结果，然后转发给客户端
+    int n;
+    printf("Get response from server, now try to forward to client...\n\n");
+    Rio_readinitb(&rio, server_fd);
+    while (n = Rio_readlineb(&rio, buf, MAXLINE)) {
+        Rio_writen(client_fd, buf, n);
+    }
     
+    //关闭客户端、服务器的连接
+    printf("Finish, now close the connection.\n\n");
+    Close(server_fd);
 }
 /* $end doit */
 
