@@ -1,13 +1,14 @@
+/* 参考：
+https://blog.csdn.net/qq_29611575/article/details/102688505?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522161243577316780269886406%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=161243577316780269886406&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~top_click~default-1-102688505.pc_search_result_no_baidu_js&utm_term=proxy+lab&spm=1018.2226.3001.4187
+https://blog.csdn.net/a2888409/article/details/47186725?ops_request_misc=&request_id=&biz_id=102&utm_term=proxy%20lab&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-1-47186725.pc_search_result_no_baidu_js&spm=1018.2226.3001.4187
+ */
 #include <stdio.h>
 #include "csapp.h"
+#include "cache.h"
 
 #define IS_HEAD_METHOD  1
 #define IS_POST_METHOD  2
 #define IS_GET_METHOD   3
-
-/* Recommended max cache and object sizes */
-#define MAX_CACHE_SIZE 1049000
-#define MAX_OBJECT_SIZE 102400
 
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
@@ -22,6 +23,7 @@ void sigepipe_handler(int sig);
 int connect_server(char* host_ip, char* port, char* query_path);//连接服务器并转发请求，成功则返回服务器的套接字描述符，失败返回0
 void *thread(void *connfd);
 
+cache_t cache;  /* Shared cache */
 
 int main(int argc, char **argv)
 {
@@ -36,6 +38,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "usage: %s <port>\n", argv[0]);
         exit(1);
     }
+
+    cache_init(&cache);
+
     // port = atoi(argv[1]);
     port = argv[1];
 
@@ -98,23 +103,45 @@ void doit(int client_fd)
     //忽略首部和实体
     read_requesthdrs(&rio);                              //line:netp:doit:readrequesthdrs
 
+    /* find cache */
+    int cache_index;
+    if ((cache_index = cache_find(&cache, uri)) != -1) {
+        Rio_writen(client_fd, cache.cache_objects[cache_index].obj, strlen(cache.cache_objects[cache_index].obj));
+        read_after(&cache, cache_index);
+        return;
+    }
+
     /* Parse URI from GET request */
     parse_uri(uri, hostname, filename, port);       //line:netp:doit:staticcheck
 
     //try to connect server
     server_fd = connect_server(hostname, port, filename);
-
+    if (server_fd == 0) {
+        return;
+    }
     //等待服务器返回结果，然后转发给客户端
-    int n;
+    char cache_buf[MAX_OBJECT_SIZE];
+    int n, buf_size = 0;
     printf("Get response from server, now try to forward to client...\n\n");
     Rio_readinitb(&rio, server_fd);
     while (n = Rio_readlineb(&rio, buf, MAXLINE)) {
+
+        buf_size += n;
+        if (buf_size < MAX_OBJECT_SIZE) {
+            strcat(cache_buf, buf);
+        }
+
         Rio_writen(client_fd, buf, n);
     }
     
     //关闭客户端、服务器的连接
     printf("Finish, now close the connection.\n\n");
     Close(server_fd);
+
+    /* store it in cache */
+    if (n < MAX_OBJECT_SIZE) {
+        cache_store(&cache, uri, cache_buf);
+    }
 }
 /* $end doit */
 
