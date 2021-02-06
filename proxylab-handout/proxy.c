@@ -5,10 +5,12 @@ https://blog.csdn.net/a2888409/article/details/47186725?ops_request_misc=&reques
 #include <stdio.h>
 #include "csapp.h"
 #include "cache.h"
+#include "sbuf.h"
 
 #define IS_HEAD_METHOD  1
 #define IS_POST_METHOD  2
 #define IS_GET_METHOD   3
+
 
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
@@ -21,14 +23,14 @@ void clienterror(int fd, char *cause, char *errnum,
 void sigepipe_handler(int sig);
 
 int connect_server(char* host_ip, char* port, char* query_path);//连接服务器并转发请求，成功则返回服务器的套接字描述符，失败返回0
-void *thread(void *connfd);
+void *thread();
 
 cache_t cache;  /* Shared cache */
+sbuf_t threads_pool;
 
 int main(int argc, char **argv)
 {
-    int listenfd, clientlen;
-    int* connfd;
+    int listenfd, clientlen, connfd;
     char* port;
     struct sockaddr_in clientaddr;
     pthread_t tid;
@@ -39,7 +41,12 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    //初始化cache和线程池
     cache_init(&cache);
+    sbuf_init(&threads_pool, SBUFSIZE);
+
+    for (int i = 0; i < NTHREADS; i++) 
+        Pthread_create(&tid, NULL, thread, NULL);
 
     // port = atoi(argv[1]);
     port = argv[1];
@@ -52,21 +59,20 @@ int main(int argc, char **argv)
     listenfd = Open_listenfd(port);
     while (1) {
         clientlen = sizeof(clientaddr);
-        connfd = Malloc(sizeof(int));
-        *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); //line:netp:tiny:accept
-        Pthread_create(&tid, NULL, thread, connfd);
+        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); //line:netp:tiny:accept
+        sbuf_insert(&threads_pool, connfd);
     }
 }
 /* $end tinymain */
 
 /* $begin thread */
-void *thread(void* connfd) {
-    int client_fd = *((int *) connfd);
+void *thread() {
     Pthread_detach(pthread_self());
-    Free(connfd);
-    doit(client_fd);
-    Close(client_fd);
-    return;
+    while (1) {
+        int client_fd = sbuf_remove(&threads_pool);
+        doit(client_fd);
+        Close(client_fd);
+    }
 }
 /* $end thread */
 
